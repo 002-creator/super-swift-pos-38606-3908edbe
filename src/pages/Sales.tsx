@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, Product, SaleItem } from '@/lib/db';
+import { db, Product, SaleItem, Sale } from '@/lib/db';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,7 +9,7 @@ import { Scan, Plus, Minus, Trash2, DollarSign, CreditCard, Printer, LogOut, Per
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 import { ProductSearch } from '@/components/ProductSearch';
-import { printReceipt } from '@/components/Receipt';
+import { ReceiptDialog } from '@/components/ReceiptDialog';
 import { useNavigate } from 'react-router-dom';
 import {
   Select,
@@ -29,6 +29,8 @@ const Sales = () => {
   const [taxRate, setTaxRate] = useState(10);
   const [currency, setCurrency] = useState('USD');
   const [cashierName, setCashierName] = useState('');
+  const [completedSale, setCompletedSale] = useState<Sale | null>(null);
+  const [showReceipt, setShowReceipt] = useState(false);
   
   const settings = useLiveQuery(() => db.settings.toArray());
   const quickQuantities = useLiveQuery(() => db.quickQuantities.toArray());
@@ -198,10 +200,9 @@ const Sales = () => {
         description: `Payment of ${currency} ${total.toFixed(2)} processed successfully`
       });
 
-      // Print receipt
-      if (settings && settings.length > 0) {
-        await printReceipt({ ...saleData, id: saleId }, settings[0]);
-      }
+      // Show receipt dialog
+      setCompletedSale({ ...saleData, id: saleId });
+      setShowReceipt(true);
 
       // Reset cart
       setCart([]);
@@ -539,6 +540,16 @@ const Sales = () => {
           </Button>
         </div>
       </div>
+
+      {/* Receipt Dialog */}
+      {settings && settings.length > 0 && (
+        <ReceiptDialog 
+          sale={completedSale}
+          settings={settings[0]}
+          open={showReceipt}
+          onOpenChange={setShowReceipt}
+        />
+      )}
     </div>
   );
 };
