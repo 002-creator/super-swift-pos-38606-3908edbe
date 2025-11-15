@@ -103,6 +103,7 @@ export const ProductImport = () => {
       // Validate and transform data
       const products: Product[] = [];
       const errors: string[] = [];
+      const availableUnits = await db.units.toArray();
 
       jsonData.forEach((row, index) => {
         const rowNum = index + 2; // +2 for header row and 0-based index
@@ -137,10 +138,14 @@ export const ProductImport = () => {
           return;
         }
 
-        // Validate unit
-        const unit = row['Unit'].toLowerCase();
-        if (!['piece', 'kg', 'g'].includes(unit)) {
-          errors.push(`Row ${rowNum}: Unit must be 'piece', 'kg', or 'g'`);
+        // Get unit from settings
+        const unitInput = row['Unit'].toLowerCase();
+        const matchedUnit = availableUnits.find(u => 
+          u.name.toLowerCase() === unitInput || u.symbol.toLowerCase() === unitInput
+        );
+        
+        if (!matchedUnit) {
+          errors.push(`Row ${rowNum}: Unit '${row['Unit']}' not found in system. Please add it in Settings first.`);
           return;
         }
 
@@ -175,7 +180,7 @@ export const ProductImport = () => {
           sellingPrice,
           stock,
           minStock,
-          unit: unit as 'piece' | 'kg' | 'g',
+          unit: matchedUnit.symbol,
           supplier: row['Supplier'] || '',
           createdAt: new Date(),
           updatedAt: new Date()
@@ -292,7 +297,7 @@ export const ProductImport = () => {
             <p className="font-semibold">Important Notes:</p>
             <ul className="list-disc list-inside space-y-1 text-muted-foreground">
               <li>All fields except Supplier are required</li>
-              <li>Unit must be: piece, kg, or g</li>
+              <li>Unit must match one defined in Settings (name or symbol)</li>
               <li>Existing products (same barcode) will be updated</li>
               <li>Make sure all numbers are formatted correctly</li>
             </ul>
