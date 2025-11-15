@@ -40,17 +40,23 @@ export const AdminPasswordDialog = ({
     try {
       const admins = await db.cashiers.where('role').equals('admin').toArray();
       
+      console.log('Admin accounts found:', admins);
+      console.log('Entered password:', password);
+      
       if (admins.length === 0) {
         toast({
           title: 'Error',
-          description: 'No admin accounts found. Please create one in Settings.',
+          description: 'No admin accounts found. Please create one in Settings → Cashiers.',
           variant: 'destructive'
         });
         setIsVerifying(false);
         return;
       }
 
-      const isValid = admins.some(admin => admin.pin === password);
+      const isValid = admins.some(admin => {
+        console.log('Comparing:', admin.pin, '===', password, '?', admin.pin === password);
+        return admin.pin === password;
+      });
       
       if (isValid) {
         toast({
@@ -63,11 +69,12 @@ export const AdminPasswordDialog = ({
       } else {
         toast({
           title: 'Access Denied',
-          description: 'Invalid admin password',
+          description: `Invalid admin password. Hint: Default is "1234"`,
           variant: 'destructive'
         });
       }
     } catch (error) {
+      console.error('Password verification error:', error);
       toast({
         title: 'Error',
         description: 'Failed to verify admin password',
@@ -97,7 +104,7 @@ export const AdminPasswordDialog = ({
             <Input
               id="admin-password"
               type="password"
-              placeholder="Enter admin password"
+              placeholder="Enter admin password (default: 1234)"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               onKeyDown={(e) => {
@@ -107,6 +114,9 @@ export const AdminPasswordDialog = ({
               }}
               autoFocus
             />
+            <p className="text-xs text-muted-foreground">
+              Default admin password is <span className="font-mono font-semibold">1234</span>. You can change it in Settings → Cashiers.
+            </p>
           </div>
         </div>
 
