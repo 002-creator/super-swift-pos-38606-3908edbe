@@ -13,6 +13,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { ReportImport } from '@/components/ReportImport';
+import { AdminPasswordDialog } from '@/components/AdminPasswordDialog';
 
 const Reports = () => {
   const { toast } = useToast();
@@ -33,6 +35,10 @@ const Reports = () => {
   const [manualCashier, setManualCashier] = useState('');
   const [manualPaymentMethod, setManualPaymentMethod] = useState<'cash' | 'card'>('cash');
   const [manualTimestamp, setManualTimestamp] = useState('');
+  
+  // Admin password dialog state
+  const [showAdminDialog, setShowAdminDialog] = useState(false);
+  const [pendingDeleteAction, setPendingDeleteAction] = useState<(() => void) | null>(null);
 
   const sales = useLiveQuery(() => db.sales.toArray());
   const products = useLiveQuery(() => db.products.toArray());
@@ -135,29 +141,33 @@ const Reports = () => {
       return;
     }
     
-    try {
-      for (const sale of filtered) {
-        if (sale.id) await db.sales.delete(sale.id);
+    setPendingDeleteAction(() => async () => {
+      try {
+        for (const sale of filtered) {
+          if (sale.id) await db.sales.delete(sale.id);
+        }
+        
+        toast({
+          title: 'Sales deleted',
+          description: `${filtered.length} sale(s) deleted successfully`
+        });
+        
+        // Reset filters
+        setFilterStartDate('');
+        setFilterEndDate('');
+        setFilterStartTime('');
+        setFilterEndTime('');
+        setFilterCashier('all');
+      } catch (error) {
+        toast({
+          title: 'Error',
+          description: 'Failed to delete sales',
+          variant: 'destructive'
+        });
       }
-      
-      toast({
-        title: 'Sales deleted',
-        description: `${filtered.length} sale(s) deleted successfully`
-      });
-      
-      // Reset filters
-      setFilterStartDate('');
-      setFilterEndDate('');
-      setFilterStartTime('');
-      setFilterEndTime('');
-      setFilterCashier('all');
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to delete sales',
-        variant: 'destructive'
-      });
-    }
+    });
+    
+    setShowAdminDialog(true);
   };
   
   const handleAddManualSale = async () => {
@@ -204,78 +214,6 @@ const Reports = () => {
       toast({
         title: 'Error',
         description: 'Failed to add manual sale',
-        variant: 'destructive'
-      });
-    }
-  };
-  
-  const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    
-    try {
-      const data = await file.arrayBuffer();
-      const workbook = XLSX.read(data);
-      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet) as any[];
-      
-      // Group by sale (assuming each row is a sale item)
-      const salesMap = new Map<string, any[]>();
-      
-      for (const row of jsonData) {
-        const key = `${row['Sale Date']}_${row['Sale Time']}_${row['Cashier']}`;
-        if (!salesMap.has(key)) {
-          salesMap.set(key, []);
-        }
-        salesMap.get(key)!.push(row);
-      }
-      
-      let importCount = 0;
-      for (const [key, items] of salesMap) {
-        const firstItem = items[0];
-        const saleItems: SaleItem[] = items.map(item => ({
-          productId: 0, // Will need to match by barcode
-          barcode: item['Barcode'],
-          name: item['Product'],
-          price: parseFloat(item['Unit Price']) || 0,
-          quantity: parseFloat(item['Quantity']) || 0,
-          total: parseFloat(item['Item Total']) || 0
-        }));
-        
-        const timestamp = new Date(`${firstItem['Sale Date']} ${firstItem['Sale Time']}`);
-        const subtotal = saleItems.reduce((sum, item) => sum + item.total, 0);
-        const tax = parseFloat(firstItem['Tax']) || 0;
-        const discount = parseFloat(firstItem['Discount']) || 0;
-        const total = parseFloat(firstItem['Sale Total']) || subtotal + tax - discount;
-        
-        await db.sales.add({
-          items: saleItems,
-          subtotal,
-          tax,
-          discount,
-          total,
-          paymentMethod: firstItem['Payment Method']?.toLowerCase() || 'cash',
-          amountPaid: total,
-          change: 0,
-          cashier: firstItem['Cashier'] || 'Imported',
-          timestamp,
-          printCount: 0,
-          printHistory: []
-        });
-        
-        importCount++;
-      }
-      
-      toast({
-        title: 'Import successful',
-        description: `${importCount} sale(s) imported from Excel`
-      });
-      
-      e.target.value = '';
-    } catch (error) {
-      toast({
-        title: 'Import failed',
-        description: 'Failed to import Excel file. Please check the format.',
         variant: 'destructive'
       });
     }
@@ -384,21 +322,7 @@ const Reports = () => {
             </DialogContent>
           </Dialog>
           
-          <label htmlFor="excel-import">
-            <Button variant="outline" asChild>
-              <span>
-                <Upload className="w-4 h-4 mr-2" />
-                Import Excel
-              </span>
-            </Button>
-          </label>
-          <input
-            id="excel-import"
-            type="file"
-            accept=".xlsx,.xls"
-            className="hidden"
-            onChange={handleImportExcel}
-          />
+          <ReportImport />
           
           <Button onClick={exportToExcel} disabled={!sales || sales.length === 0}>
             <FileDown className="w-4 h-4 mr-2" />
@@ -601,6 +525,19 @@ const Reports = () => {
           )}
         </CardContent>
       </Card>
+      
+      <AdminPasswordDialog
+        open={showAdminDialog}
+        onOpenChange={setShowAdminDialog}
+        onConfirm={() => {
+          if (pendingDeleteAction) {
+            pendingDeleteAction();
+            setPendingDeleteAction(null);
+          }
+        }}
+        title="Admin Verification Required"
+        description="Deleting sales records requires admin authorization. Please enter admin password."
+      />
     </div>
   );
 };

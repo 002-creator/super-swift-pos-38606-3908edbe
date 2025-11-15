@@ -9,7 +9,7 @@ export interface Product {
   sellingPrice: number;
   stock: number;
   minStock: number;
-  unit: 'piece' | 'kg' | 'g';
+  unit: string;
   image?: string;
   supplier?: string;
   createdAt: Date;
