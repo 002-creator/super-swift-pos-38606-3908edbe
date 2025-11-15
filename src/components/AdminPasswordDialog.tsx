@@ -38,7 +38,7 @@ export const AdminPasswordDialog = ({
     setIsVerifying(true);
     
     try {
-      const admins = await db.cashiers.where('role').equals('admin').toArray();
+      const admins = await db.cashiers.filter((c) => c.role === 'admin').toArray();
       
       console.log('Admin accounts found:', admins);
       console.log('Entered password:', password);
