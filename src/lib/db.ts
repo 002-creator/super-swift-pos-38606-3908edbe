@@ -12,6 +12,9 @@ export interface Product {
   unit: string;
   image?: string;
   supplier?: string;
+  discountPercent?: number;
+  discountStartDate?: Date;
+  discountEndDate?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
