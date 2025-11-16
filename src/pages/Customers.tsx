@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, Customer } from '@/lib/db';
+import { db, Customer, LoanPurchase } from '@/lib/db';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Users, Plus, Edit, Trash2, Search } from 'lucide-react';
+import { Users, Plus, Edit, Trash2, Search, DollarSign } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   Dialog,
@@ -14,13 +14,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 
 const Customers = () => {
   const { toast } = useToast();
   const customers = useLiveQuery(() => db.customers.toArray());
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isLoanDialogOpen, setIsLoanDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [loanData, setLoanData] = useState({ items: '', amount: 0, paid: 0 });
   const [formData, setFormData] = useState<Partial<Customer>>({
     name: '',
     phone: '',
@@ -64,6 +68,8 @@ const Customers = () => {
           email: formData.email || '',
           loyaltyPoints: 0,
           totalPurchases: 0,
+          loanBalance: 0,
+          loanPurchases: [],
           createdAt: new Date()
         });
         toast({
@@ -122,6 +128,85 @@ const Customers = () => {
       totalPurchases: 0
     });
     setEditingCustomer(null);
+  };
+
+  const handleAddLoan = async () => {
+    if (!selectedCustomer || !loanData.items || loanData.amount <= 0) {
+      toast({
+        title: 'Error',
+        description: 'Please fill in all required fields',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    try {
+      const newLoan: LoanPurchase = {
+        id: Date.now().toString(),
+        items: loanData.items,
+        amount: loanData.amount || 0,
+        date: new Date(),
+        paid: loanData.paid || 0,
+        remaining: (loanData.amount || 0) - (loanData.paid || 0)
+      };
+
+      const existingLoans = selectedCustomer.loanPurchases || [];
+      const updatedLoans = [...existingLoans, newLoan];
+      const totalLoanBalance = updatedLoans.reduce((sum, loan) => sum + loan.remaining, 0);
+
+      await db.customers.update(selectedCustomer.id!, {
+        loanPurchases: updatedLoans,
+        loanBalance: totalLoanBalance
+      });
+
+      toast({
+        title: 'Success',
+        description: 'Loan purchase added successfully'
+      });
+
+      setIsLoanDialogOpen(false);
+      setLoanData({ items: '', amount: 0, paid: 0 });
+      setSelectedCustomer(null);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to add loan purchase',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handlePayLoan = async (customer: Customer, loanId: string, payAmount: number) => {
+    try {
+      const loan = customer.loanPurchases?.find(l => l.id === loanId);
+      if (!loan) return;
+
+      const updatedLoans = customer.loanPurchases?.map(l => {
+        if (l.id === loanId) {
+          const newPaid = (l.paid || 0) + (payAmount || 0);
+          return { ...l, paid: newPaid, remaining: l.amount - newPaid };
+        }
+        return l;
+      }) || [];
+
+      const totalLoanBalance = updatedLoans.reduce((sum, loan) => sum + loan.remaining, 0);
+
+      await db.customers.update(customer.id!, {
+        loanPurchases: updatedLoans,
+        loanBalance: totalLoanBalance
+      });
+
+      toast({
+        title: 'Success',
+        description: 'Payment recorded successfully'
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to record payment',
+        variant: 'destructive'
+      });
+    }
   };
 
   return (
@@ -208,39 +293,82 @@ const Customers = () => {
           {filteredCustomers && filteredCustomers.length > 0 ? (
             <div className="space-y-4">
               {filteredCustomers.map((customer) => (
-                <div key={customer.id} className="flex items-center justify-between p-4 bg-secondary rounded-lg">
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-lg">{customer.name}</h4>
-                    <p className="text-sm text-muted-foreground">{customer.phone}</p>
-                    {customer.email && (
-                      <p className="text-sm text-muted-foreground">{customer.email}</p>
-                    )}
-                    <div className="flex gap-4 mt-2">
-                      <span className="text-sm">
-                        <span className="font-medium">Loyalty Points:</span> {customer.loyaltyPoints}
-                      </span>
-                      <span className="text-sm">
-                        <span className="font-medium">Total Purchases:</span> LKR {customer.totalPurchases.toFixed(2)}
-                      </span>
+                <div key={customer.id} className="p-6 bg-card rounded-lg border">
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h3 className="text-lg font-semibold">{customer.name}</h3>
+                      <p className="text-sm text-muted-foreground">{customer.phone}</p>
+                      {customer.email && <p className="text-sm text-muted-foreground">{customer.email}</p>}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" onClick={() => handleEdit(customer)}>
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => handleDelete(customer.id!)}>
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-muted-foreground">Loyalty Points</p>
+                      <p className="font-medium">{customer.loyaltyPoints || 0}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Total Purchases</p>
+                      <p className="font-medium">{customer.totalPurchases?.toFixed(2) || '0.00'}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Loan Balance</p>
+                      <p className="font-medium text-destructive">{customer.loanBalance?.toFixed(2) || '0.00'}</p>
                     </div>
                   </div>
                   
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEdit(customer)}
-                    >
-                      <Edit className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDelete(customer.id!)}
-                    >
-                      <Trash2 className="w-4 h-4 text-destructive" />
-                    </Button>
-                  </div>
+                  {/* Loan Purchases */}
+                  {customer.loanPurchases && customer.loanPurchases.length > 0 && (
+                    <div className="mt-4 space-y-2">
+                      <h4 className="font-medium text-sm">Loan Purchases</h4>
+                      {customer.loanPurchases.map((loan) => (
+                        <div key={loan.id} className="p-3 bg-muted rounded-md text-sm space-y-1">
+                          <div className="flex justify-between">
+                            <span className="font-medium">{loan.items}</span>
+                            <span className="text-destructive">{loan.remaining.toFixed(2)}</span>
+                          </div>
+                          <div className="text-muted-foreground text-xs">
+                            {new Date(loan.date).toLocaleDateString()} - 
+                            Total: {loan.amount.toFixed(2)} | Paid: {loan.paid.toFixed(2)}
+                          </div>
+                          {loan.remaining > 0 && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                const amount = parseFloat(prompt(`Enter payment amount (Remaining: ${loan.remaining.toFixed(2)})`) || '0');
+                                if (amount > 0 && amount <= loan.remaining) {
+                                  handlePayLoan(customer, loan.id, amount);
+                                }
+                              }}
+                            >
+                              Pay
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full mt-4"
+                    onClick={() => {
+                      setSelectedCustomer(customer);
+                      setIsLoanDialogOpen(true);
+                    }}
+                  >
+                    <DollarSign className="w-4 h-4 mr-2" />
+                    Add Loan Purchase
+                  </Button>
                 </div>
               ))}
             </div>
@@ -253,6 +381,60 @@ const Customers = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Loan Purchase Dialog */}
+      <Dialog open={isLoanDialogOpen} onOpenChange={(open) => {
+        setIsLoanDialogOpen(open);
+        if (!open) {
+          setLoanData({ items: '', amount: 0, paid: 0 });
+          setSelectedCustomer(null);
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Loan Purchase</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Items/Description</Label>
+              <Textarea
+                placeholder="Describe the items purchased"
+                value={loanData.items}
+                onChange={(e) => setLoanData({ ...loanData, items: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label>Total Amount</Label>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={loanData.amount || ''}
+                onChange={(e) => setLoanData({ ...loanData, amount: parseFloat(e.target.value) || 0 })}
+              />
+            </div>
+            <div>
+              <Label>Amount Paid Now</Label>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                max={loanData.amount}
+                value={loanData.paid || ''}
+                onChange={(e) => setLoanData({ ...loanData, paid: parseFloat(e.target.value) || 0 })}
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setIsLoanDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleAddLoan}>
+                Add Loan Purchase
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
