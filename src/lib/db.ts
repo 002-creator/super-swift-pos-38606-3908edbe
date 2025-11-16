@@ -30,6 +30,7 @@ export interface Sale {
   amountPaid: number;
   change: number;
   customerId?: number;
+  customerName?: string;
   cashier: string;
   timestamp: Date;
   printCount: number;
@@ -56,7 +57,18 @@ export interface Customer {
   email?: string;
   loyaltyPoints: number;
   totalPurchases: number;
+  loanBalance: number;
+  loanPurchases: LoanPurchase[];
   createdAt: Date;
+}
+
+export interface LoanPurchase {
+  id: string;
+  items: string;
+  amount: number;
+  date: Date;
+  paid: number;
+  remaining: number;
 }
 
 export interface Settings {

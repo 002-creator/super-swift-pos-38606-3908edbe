@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { ShoppingCart } from 'lucide-react';
+import { SystemRestore } from '@/components/SystemRestore';
 
 const Login = () => {
   const { toast } = useToast();
@@ -40,43 +41,48 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 to-accent/10">
-      <Card className="w-96">
-        <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
-            <ShoppingCart className="w-16 h-16 text-primary" />
-          </div>
-          <CardTitle className="text-2xl">SuperMart POS</CardTitle>
-          <p className="text-muted-foreground">Cashier Login</p>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <Input
-                placeholder="Cashier Name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                autoFocus
-              />
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 to-accent/10 p-4">
+      <div className="w-full max-w-md space-y-6">
+        <Card>
+          <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              <ShoppingCart className="w-16 w-16 text-primary" />
             </div>
-            <div>
-              <Input
-                type="password"
-                placeholder="PIN"
-                value={pin}
-                onChange={(e) => setPin(e.target.value)}
-                maxLength={6}
-              />
-            </div>
-            <Button type="submit" className="w-full" size="lg">
-              Login
-            </Button>
-          </form>
-          <p className="text-sm text-muted-foreground mt-4 text-center">
-            Default: Admin / 1234
-          </p>
-        </CardContent>
-      </Card>
+            <CardTitle className="text-2xl">SuperMart POS</CardTitle>
+            <p className="text-muted-foreground">Cashier Login</p>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div>
+                <Input
+                  placeholder="Cashier Name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  autoFocus
+                />
+              </div>
+              <div>
+                <Input
+                  type="password"
+                  placeholder="PIN"
+                  value={pin}
+                  onChange={(e) => setPin(e.target.value)}
+                  maxLength={6}
+                />
+              </div>
+              <Button type="submit" className="w-full" size="lg">
+                Login
+              </Button>
+            </form>
+            <p className="text-sm text-muted-foreground mt-4 text-center">
+              Default: Admin / 1234
+            </p>
+          </CardContent>
+        </Card>
+        
+        {/* System Restore */}
+        <SystemRestore />
+      </div>
     </div>
   );
 };

@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Save, Download, Upload, Plus, Trash2, UserPlus } from 'lucide-react';
+import { Save, Download, Upload, Plus, Trash2, UserPlus, KeyRound } from 'lucide-react';
+import { SystemRestore } from '@/components/SystemRestore';
 import {
   Dialog,
   DialogContent,
@@ -44,6 +45,8 @@ const Settings = () => {
   const [newCashier, setNewCashier] = useState({ name: '', pin: '', role: 'cashier' as 'admin' | 'cashier' });
   const [isCashierDialogOpen, setIsCashierDialogOpen] = useState(false);
   const [newQuickQty, setNewQuickQty] = useState({ value: 0, label: '' });
+  const [newAdminPassword, setNewAdminPassword] = useState('');
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -78,13 +81,51 @@ const Settings = () => {
     }
   };
 
+  const handleResetAdminPassword = async () => {
+    if (!newAdminPassword || newAdminPassword.length < 4) {
+      toast({
+        title: 'Error',
+        description: 'Password must be at least 4 characters',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    try {
+      const adminCashiers = await db.cashiers.filter(c => c.role === 'admin').toArray();
+      
+      if (adminCashiers.length > 0) {
+        await db.cashiers.update(adminCashiers[0].id!, { pin: newAdminPassword });
+        toast({
+          title: 'Success',
+          description: 'Admin password has been reset'
+        });
+      }
+      
+      setIsPasswordDialogOpen(false);
+      setNewAdminPassword('');
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to reset admin password',
+        variant: 'destructive'
+      });
+    }
+  };
+
   const handleExport = async () => {
     try {
       const data = {
         products: await db.products.toArray(),
         sales: await db.sales.toArray(),
         customers: await db.customers.toArray(),
-        settings: await db.settings.toArray()
+        settings: await db.settings.toArray(),
+        categories: await db.categories.toArray(),
+        suppliers: await db.suppliers.toArray(),
+        units: await db.units.toArray(),
+        cashiers: await db.cashiers.toArray(),
+        expenses: await db.expenses.toArray(),
+        quickQuantities: await db.quickQuantities.toArray()
       };
       
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -116,11 +157,21 @@ const Settings = () => {
       try {
         const data = JSON.parse(event.target?.result as string);
         
-        await db.transaction('rw', [db.products, db.sales, db.customers, db.settings], async () => {
+        await db.transaction('rw', [
+          db.products, db.sales, db.customers, db.settings,
+          db.categories, db.suppliers, db.units, db.cashiers,
+          db.expenses, db.quickQuantities
+        ], async () => {
           if (data.products) await db.products.bulkPut(data.products);
           if (data.sales) await db.sales.bulkPut(data.sales);
           if (data.customers) await db.customers.bulkPut(data.customers);
           if (data.settings) await db.settings.bulkPut(data.settings);
+          if (data.categories) await db.categories.bulkPut(data.categories);
+          if (data.suppliers) await db.suppliers.bulkPut(data.suppliers);
+          if (data.units) await db.units.bulkPut(data.units);
+          if (data.cashiers) await db.cashiers.bulkPut(data.cashiers);
+          if (data.expenses) await db.expenses.bulkPut(data.expenses);
+          if (data.quickQuantities) await db.quickQuantities.bulkPut(data.quickQuantities);
         });
         
         toast({
@@ -539,6 +590,53 @@ const Settings = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Admin Password Reset */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <KeyRound className="h-5 w-5" />
+              Reset Admin Password
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="w-full">
+                  <KeyRound className="mr-2 h-4 w-4" />
+                  Change Admin Password
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Reset Admin Password</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>New Password</Label>
+                    <Input
+                      type="password"
+                      placeholder="Enter new password (min 4 characters)"
+                      value={newAdminPassword}
+                      onChange={(e) => setNewAdminPassword(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={() => setIsPasswordDialogOpen(false)} className="flex-1">
+                      Cancel
+                    </Button>
+                    <Button onClick={handleResetAdminPassword} className="flex-1">
+                      Reset Password
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </CardContent>
+        </Card>
+
+        {/* System Restore */}
+        <SystemRestore />
 
         {/* Backup & Restore */}
         <Card>

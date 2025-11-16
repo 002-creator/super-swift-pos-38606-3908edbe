@@ -31,9 +31,17 @@ const Sales = () => {
   const [cashierName, setCashierName] = useState('');
   const [completedSale, setCompletedSale] = useState<Sale | null>(null);
   const [showReceipt, setShowReceipt] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<number | null>(null);
+  const [customerSearch, setCustomerSearch] = useState('');
   
   const settings = useLiveQuery(() => db.settings.toArray());
   const quickQuantities = useLiveQuery(() => db.quickQuantities.toArray());
+  const customers = useLiveQuery(() => db.customers.toArray());
+
+  const filteredCustomers = customers?.filter(c =>
+    c.name.toLowerCase().includes(customerSearch.toLowerCase()) ||
+    c.phone.includes(customerSearch)
+  ) || [];
 
   useEffect(() => {
     const cashierData = localStorage.getItem('cashier');
@@ -181,6 +189,8 @@ const Sales = () => {
     }
 
     try {
+      const customer = selectedCustomer ? await db.customers.get(selectedCustomer) : null;
+      
       const saleData = {
         items: cart,
         subtotal,
@@ -190,6 +200,8 @@ const Sales = () => {
         paymentMethod: method,
         amountPaid: total,
         change: 0,
+        customerId: selectedCustomer || undefined,
+        customerName: customer?.name,
         cashier: cashierName,
         timestamp: new Date(),
         printCount: 0,
@@ -204,9 +216,17 @@ const Sales = () => {
         const product = await db.products.get(item.productId);
         if (product) {
           await db.products.update(item.productId, {
-            stock: product.stock - item.quantity
+            stock: (product.stock || 0) - item.quantity
           });
         }
+      }
+
+      // Update customer
+      if (customer) {
+        await db.customers.update(selectedCustomer!, {
+          totalPurchases: (customer.totalPurchases || 0) + total,
+          loyaltyPoints: (customer.loyaltyPoints || 0) + Math.floor(total)
+        });
       }
 
       toast({
@@ -222,6 +242,8 @@ const Sales = () => {
       setCart([]);
       setDiscountPercent(0);
       setDiscountAmount(0);
+      setSelectedCustomer(null);
+      setCustomerSearch('');
       
     } catch (error) {
       toast({
@@ -434,11 +456,50 @@ const Sales = () => {
         </Card>
       </div>
 
-      {/* Right: Checkout Panel */}
-      <div className="w-96 bg-card border-l border-border p-6 flex flex-col">
-        <h2 className="text-2xl font-bold mb-6">Checkout</h2>
+        {/* Right: Checkout Panel */}
+        <div className="w-96 bg-card border-l border-border p-6 flex flex-col">
+          <h2 className="text-2xl font-bold mb-6">Checkout</h2>
 
-        {/* Discount */}
+          {/* Customer Selection */}
+          <div className="mb-6 space-y-2">
+            <Label>Customer (Optional)</Label>
+            <Input
+              placeholder="Search by name or phone..."
+              value={customerSearch}
+              onChange={(e) => setCustomerSearch(e.target.value)}
+            />
+            {customerSearch && filteredCustomers.length > 0 && (
+              <div className="max-h-32 overflow-auto border rounded-md">
+                {filteredCustomers.map((customer) => (
+                  <div
+                    key={customer.id}
+                    className={`p-2 cursor-pointer hover:bg-accent ${selectedCustomer === customer.id ? 'bg-accent' : ''}`}
+                    onClick={() => {
+                      setSelectedCustomer(customer.id!);
+                      setCustomerSearch(customer.name);
+                    }}
+                  >
+                    <div className="font-medium">{customer.name}</div>
+                    <div className="text-sm text-muted-foreground">{customer.phone}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {selectedCustomer && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSelectedCustomer(null);
+                  setCustomerSearch('');
+                }}
+              >
+                Clear Customer
+              </Button>
+            )}
+          </div>
+
+          {/* Discount */}
         <div className="mb-6">
           <Label>Discount Type</Label>
           <div className="flex gap-2 mt-2 mb-3">
