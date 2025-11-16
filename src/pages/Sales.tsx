@@ -66,6 +66,20 @@ const Sales = () => {
     const existingItem = cart.find(item => item.productId === product.id);
     const step = getStepSize(product.unit);
     
+    // Check for active discount
+    let finalPrice = product.sellingPrice;
+    if (product.discountPercent && product.discountPercent > 0) {
+      const now = new Date();
+      const start = product.discountStartDate ? new Date(product.discountStartDate) : null;
+      const end = product.discountEndDate ? new Date(product.discountEndDate) : null;
+      
+      const isDiscountActive = (!start || now >= start) && (!end || now <= end);
+      
+      if (isDiscountActive) {
+        finalPrice = product.sellingPrice * (1 - product.discountPercent / 100);
+      }
+    }
+    
     if (existingItem) {
       if (existingItem.quantity >= (product.stock || 0)) {
         toast({
@@ -95,9 +109,9 @@ const Sales = () => {
         productId: product.id!,
         barcode: product.barcode,
         name: product.name,
-        price: product.sellingPrice,
+        price: finalPrice,
         quantity: step,
-        total: product.sellingPrice * step,
+        total: finalPrice * step,
         unit: product.unit
       }]);
     }

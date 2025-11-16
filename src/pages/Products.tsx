@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { ProductImport } from '@/components/ProductImport';
+import { ProductDiscount } from '@/components/ProductDiscount';
 import {
   Select,
   SelectContent,
@@ -314,7 +315,7 @@ const Products = () => {
               <h3 className="font-bold text-lg mb-1">{product.name}</h3>
               <p className="text-sm text-muted-foreground mb-3">{product.category}</p>
               
-              <div className="space-y-2 text-sm">
+              <div className="space-y-2 text-sm mb-3">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Barcode:</span>
                   <span className="font-mono">{product.barcode}</span>
@@ -330,6 +331,8 @@ const Products = () => {
                   </span>
                 </div>
               </div>
+              
+              <ProductDiscount product={product} />
             </CardContent>
           </Card>
         ))}

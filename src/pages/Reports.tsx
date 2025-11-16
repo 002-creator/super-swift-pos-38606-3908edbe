@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { ReportImport } from '@/components/ReportImport';
 import { AdminPasswordDialog } from '@/components/AdminPasswordDialog';
+import { ProductSearch } from '@/components/ProductSearch';
 
 const Reports = () => {
   const { toast } = useToast();
@@ -35,6 +36,9 @@ const Reports = () => {
   const [manualCashier, setManualCashier] = useState('');
   const [manualPaymentMethod, setManualPaymentMethod] = useState<'cash' | 'card'>('cash');
   const [manualTimestamp, setManualTimestamp] = useState('');
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [itemQuantity, setItemQuantity] = useState(1);
+  const [itemPrice, setItemPrice] = useState(0);
   
   // Admin password dialog state
   const [showAdminDialog, setShowAdminDialog] = useState(false);
@@ -170,11 +174,46 @@ const Reports = () => {
     setShowAdminDialog(true);
   };
   
+  const addItemToManualSale = () => {
+    if (!selectedProduct || itemQuantity <= 0 || itemPrice <= 0) {
+      toast({
+        title: 'Invalid input',
+        description: 'Please select a product and enter valid quantity and price',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    const newItem: SaleItem = {
+      productId: selectedProduct.id,
+      barcode: selectedProduct.barcode,
+      name: selectedProduct.name,
+      price: itemPrice,
+      quantity: itemQuantity,
+      total: itemPrice * itemQuantity,
+      unit: selectedProduct.unit
+    };
+
+    setManualSaleItems([...manualSaleItems, newItem]);
+    setSelectedProduct(null);
+    setItemQuantity(1);
+    setItemPrice(0);
+    
+    toast({
+      title: 'Item added',
+      description: `${selectedProduct.name} added to sale`
+    });
+  };
+
+  const removeItemFromManualSale = (index: number) => {
+    setManualSaleItems(manualSaleItems.filter((_, i) => i !== index));
+  };
+
   const handleAddManualSale = async () => {
     if (manualSaleItems.length === 0 || !manualCashier || !manualTimestamp) {
       toast({
         title: 'Missing information',
-        description: 'Please fill all required fields',
+        description: 'Please add items and fill all required fields',
         variant: 'destructive'
       });
       return;
@@ -306,11 +345,76 @@ const Reports = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                <div>
-                  <Label>Sale Items (simplified - add items manually)</Label>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    For now, use Excel import for complex sales with multiple items
-                  </p>
+                <div className="space-y-3">
+                  <Label>Add Sale Items</Label>
+                  <div className="grid grid-cols-4 gap-2">
+                    <div className="col-span-2">
+                      <ProductSearch 
+                        onSelectProduct={(product) => {
+                          setSelectedProduct(product);
+                          setItemPrice(product.sellingPrice);
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <Input
+                        type="number"
+                        placeholder="Qty"
+                        value={itemQuantity}
+                        onChange={(e) => setItemQuantity(Number(e.target.value))}
+                        min="0.01"
+                        step="0.01"
+                      />
+                    </div>
+                    <div>
+                      <Input
+                        type="number"
+                        placeholder="Price"
+                        value={itemPrice}
+                        onChange={(e) => setItemPrice(Number(e.target.value))}
+                        min="0.01"
+                        step="0.01"
+                      />
+                    </div>
+                  </div>
+                  <Button 
+                    type="button" 
+                    onClick={addItemToManualSale}
+                    variant="outline"
+                    className="w-full"
+                    disabled={!selectedProduct}
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Item
+                  </Button>
+                  
+                  {manualSaleItems.length > 0 && (
+                    <div className="border rounded-lg p-3 space-y-2 max-h-48 overflow-y-auto">
+                      {manualSaleItems.map((item, index) => (
+                        <div key={index} className="flex items-center justify-between bg-secondary p-2 rounded">
+                          <div className="flex-1">
+                            <p className="font-medium text-sm">{item.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {item.quantity} x {currency} {item.price.toFixed(2)} = {currency} {item.total.toFixed(2)}
+                            </p>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeItemFromManualSale(index)}
+                          >
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </div>
+                      ))}
+                      <div className="pt-2 border-t">
+                        <p className="text-sm font-semibold text-right">
+                          Total: {currency} {manualSaleItems.reduce((sum, item) => sum + item.total, 0).toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
               <DialogFooter>
