@@ -10,6 +10,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [todaySales, setTodaySales] = useState(0);
   const [todayTransactions, setTodayTransactions] = useState(0);
+  const [showAllLowStock, setShowAllLowStock] = useState(false);
 
   const products = useLiveQuery(() => db.products.toArray());
   const lowStockProducts = useLiveQuery(() => 
@@ -133,14 +134,25 @@ const Dashboard = () => {
       {lowStockProducts && lowStockProducts.length > 0 && (
         <Card className="border-warning">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-warning">
-              <AlertTriangle className="h-5 w-5" />
-              Low Stock Alert
+            <CardTitle className="flex items-center justify-between">
+              <span className="flex items-center gap-2 text-warning">
+                <AlertTriangle className="h-5 w-5" />
+                Low Stock Alert
+              </span>
+              {lowStockProducts.length > 5 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowAllLowStock(!showAllLowStock)}
+                >
+                  {showAllLowStock ? 'Show Less' : `Show All (${lowStockProducts.length})`}
+                </Button>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {lowStockProducts.slice(0, 5).map((product) => (
+              {(showAllLowStock ? lowStockProducts : lowStockProducts.slice(0, 5)).map((product) => (
                 <div 
                   key={product.id} 
                   className="flex justify-between items-center p-3 bg-warning/5 rounded-lg"
