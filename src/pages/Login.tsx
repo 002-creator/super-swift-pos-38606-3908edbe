@@ -80,8 +80,9 @@ const Login = () => {
           </CardContent>
         </Card>
         
-        {/* System Restore */}
-        <SystemRestore />
+        <div className="text-center">
+          <SystemRestore compact />
+        </div>
       </div>
     </div>
   );

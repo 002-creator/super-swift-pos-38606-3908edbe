@@ -7,6 +7,14 @@ import { useToast } from '@/hooks/use-toast';
 import { RotateCcw, AlertTriangle } from 'lucide-react';
 import { AdminPasswordDialog } from './AdminPasswordDialog';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -14,7 +22,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
-export const SystemRestore = () => {
+interface SystemRestoreProps {
+  compact?: boolean;
+}
+
+export const SystemRestore = ({ compact = false }: SystemRestoreProps) => {
   const { toast } = useToast();
   const [showAdminDialog, setShowAdminDialog] = useState(false);
   const [restorePeriod, setRestorePeriod] = useState<string>('1-day');
@@ -86,6 +98,74 @@ export const SystemRestore = () => {
     }
   };
 
+  const restoreContent = (
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">
+        Restore the system to a previous state by removing all transactions within a time period. This action cannot be undone.
+      </p>
+      
+      <div className="space-y-2">
+        <Label>Restore Period</Label>
+        <Select value={restorePeriod} onValueChange={setRestorePeriod}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="1-day">Last 1 Day</SelectItem>
+            <SelectItem value="3-days">Last 3 Days</SelectItem>
+            <SelectItem value="1-week">Last 1 Week</SelectItem>
+            <SelectItem value="1-month">Last 1 Month</SelectItem>
+            <SelectItem value="all">Everything</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <Button 
+        variant="destructive" 
+        onClick={() => setShowAdminDialog(true)}
+        className="w-full"
+      >
+        <RotateCcw className="mr-2 h-4 w-4" />
+        Restore System
+      </Button>
+    </div>
+  );
+
+  if (compact) {
+    return (
+      <>
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-destructive">
+              <RotateCcw className="mr-2 h-4 w-4" />
+              System Restore
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-destructive">
+                <AlertTriangle className="h-5 w-5" />
+                System Restore
+              </DialogTitle>
+              <DialogDescription>
+                Restore the system to a previous state
+              </DialogDescription>
+            </DialogHeader>
+            {restoreContent}
+          </DialogContent>
+        </Dialog>
+
+        <AdminPasswordDialog
+          open={showAdminDialog}
+          onOpenChange={setShowAdminDialog}
+          onConfirm={handleRestore}
+          title="Confirm System Restore"
+          description="This will permanently delete transactions and restore product stock. Enter admin password to continue."
+        />
+      </>
+    );
+  }
+
   return (
     <>
       <Card className="border-destructive/50">
@@ -95,35 +175,8 @@ export const SystemRestore = () => {
             System Restore
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Restore the system to a previous state by removing all transactions within a time period. This action cannot be undone.
-          </p>
-          
-          <div className="space-y-2">
-            <Label>Restore Period</Label>
-            <Select value={restorePeriod} onValueChange={setRestorePeriod}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1-day">Last 1 Day</SelectItem>
-                <SelectItem value="3-days">Last 3 Days</SelectItem>
-                <SelectItem value="1-week">Last 1 Week</SelectItem>
-                <SelectItem value="1-month">Last 1 Month</SelectItem>
-                <SelectItem value="all">Everything</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <Button 
-            variant="destructive" 
-            onClick={() => setShowAdminDialog(true)}
-            className="w-full"
-          >
-            <RotateCcw className="mr-2 h-4 w-4" />
-            Restore System
-          </Button>
+        <CardContent>
+          {restoreContent}
         </CardContent>
       </Card>
 
