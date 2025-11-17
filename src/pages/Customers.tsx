@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, Customer, LoanPurchase } from '@/lib/db';
+import { db, Customer, LoanPurchase, Sale } from '@/lib/db';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Users, Plus, Edit, Trash2, Search, DollarSign } from 'lucide-react';
+import { Users, Plus, Edit, Trash2, Search, DollarSign, Receipt, Printer } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   Dialog,
@@ -15,6 +15,8 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { printReceipt } from '@/components/Receipt';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const Customers = () => {
   const { toast } = useToast();
@@ -22,9 +24,13 @@ const Customers = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isLoanDialogOpen, setIsLoanDialogOpen] = useState(false);
+  const [isPurchaseHistoryOpen, setIsPurchaseHistoryOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [loanData, setLoanData] = useState({ items: '', amount: 0, paid: 0 });
+  const [customerSales, setCustomerSales] = useState<Sale[]>([]);
+  
+  const settings = useLiveQuery(() => db.settings.toArray().then(s => s[0]));
   const [formData, setFormData] = useState<Partial<Customer>>({
     name: '',
     phone: '',
@@ -209,6 +215,38 @@ const Customers = () => {
     }
   };
 
+  const handleViewPurchaseHistory = async (customer: Customer) => {
+    if (!customer.id) return;
+    
+    const sales = await db.sales
+      .where('customerId')
+      .equals(customer.id)
+      .reverse()
+      .sortBy('timestamp');
+    
+    setCustomerSales(sales);
+    setSelectedCustomer(customer);
+    setIsPurchaseHistoryOpen(true);
+  };
+
+  const handlePrintSale = async (sale: Sale) => {
+    if (!settings) return;
+    
+    try {
+      await printReceipt(sale, settings);
+      toast({
+        title: 'Success',
+        description: 'Receipt sent to printer'
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to print receipt',
+        variant: 'destructive'
+      });
+    }
+  };
+
   return (
     <div className="p-8">
       <div className="flex justify-between items-center mb-8">
@@ -314,9 +352,20 @@ const Customers = () => {
                       <p className="text-muted-foreground">Loyalty Points</p>
                       <p className="font-medium">{customer.loyaltyPoints || 0}</p>
                     </div>
-                    <div>
+                    <div className="flex flex-col gap-1">
                       <p className="text-muted-foreground">Total Purchases</p>
-                      <p className="font-medium">{customer.totalPurchases?.toFixed(2) || '0.00'}</p>
+                      <div className="flex items-center justify-between">
+                        <p className="font-medium">{customer.totalPurchases?.toFixed(2) || '0.00'}</p>
+                        <Button 
+                          size="sm" 
+                          variant="ghost"
+                          className="h-6 px-2 text-xs"
+                          onClick={() => handleViewPurchaseHistory(customer)}
+                        >
+                          <Receipt className="w-3 h-3 mr-1" />
+                          View Bills
+                        </Button>
+                      </div>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Loan Balance</p>
@@ -433,6 +482,90 @@ const Customers = () => {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Purchase History Dialog */}
+      <Dialog open={isPurchaseHistoryOpen} onOpenChange={setIsPurchaseHistoryOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>
+              Purchase History - {selectedCustomer?.name}
+            </DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="h-[60vh] pr-4">
+            {customerSales.length > 0 ? (
+              <div className="space-y-4">
+                {customerSales.map((sale) => (
+                  <Card key={sale.id}>
+                    <CardContent className="pt-6">
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="space-y-1">
+                          <p className="text-sm text-muted-foreground">
+                            {sale.timestamp.toLocaleString()}
+                          </p>
+                          <p className="text-sm">
+                            <span className="text-muted-foreground">Cashier:</span> {sale.cashier}
+                          </p>
+                          <p className="text-sm">
+                            <span className="text-muted-foreground">Payment:</span> {sale.paymentMethod}
+                          </p>
+                        </div>
+                        <div className="flex flex-col items-end gap-2">
+                          <p className="text-lg font-bold">
+                            ${sale.total.toFixed(2)}
+                          </p>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handlePrintSale(sale)}
+                          >
+                            <Printer className="w-4 h-4 mr-1" />
+                            Print
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      <div className="border-t pt-3">
+                        <p className="text-sm font-semibold mb-2">Items:</p>
+                        <div className="space-y-2">
+                          {sale.items.map((item, idx) => (
+                            <div key={idx} className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">
+                                {item.name} x {item.quantity} {item.unit || 'pc'}
+                              </span>
+                              <span>${item.total.toFixed(2)}</span>
+                            </div>
+                          ))}
+                        </div>
+                        
+                        <div className="border-t mt-3 pt-3 space-y-1">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Subtotal:</span>
+                            <span>${sale.subtotal.toFixed(2)}</span>
+                          </div>
+                          {sale.discount > 0 && (
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">Discount:</span>
+                              <span className="text-destructive">-${sale.discount.toFixed(2)}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Tax:</span>
+                            <span>${sale.tax.toFixed(2)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                No purchase history found for this customer
+              </div>
+            )}
+          </ScrollArea>
         </DialogContent>
       </Dialog>
     </div>
