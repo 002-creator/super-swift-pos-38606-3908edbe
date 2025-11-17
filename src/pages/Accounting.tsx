@@ -12,10 +12,11 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { TrendingUp, TrendingDown, DollarSign, Package, FileDown, Printer } from "lucide-react";
-import { format, startOfMonth, endOfMonth, startOfYear, endOfYear } from "date-fns";
+import { format, startOfMonth, endOfMonth, startOfYear, endOfYear, subMonths, eachMonthOfInterval } from "date-fns";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { toast } from "sonner";
+import { BarChart, Bar, PieChart, Pie, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from "recharts";
 
 const Accounting = () => {
   const sales = useLiveQuery(() => db.sales.toArray());
@@ -81,6 +82,63 @@ const Accounting = () => {
     acc[exp.category] = (acc[exp.category] || 0) + exp.amount;
     return acc;
   }, {} as Record<string, number>) || {};
+
+  // Monthly trend data for last 6 months
+  const last6Months = eachMonthOfInterval({
+    start: subMonths(new Date(), 5),
+    end: new Date()
+  });
+
+  const monthlyTrendData = last6Months.map(monthDate => {
+    const monthStart = startOfMonth(monthDate);
+    const monthEnd = endOfMonth(monthDate);
+    
+    const monthSalesData = sales?.filter(s => {
+      const saleDate = new Date(s.timestamp);
+      return saleDate >= monthStart && saleDate <= monthEnd;
+    }) || [];
+
+    const monthExpensesData = expenses?.filter(e => {
+      const expDate = new Date(e.date);
+      return expDate >= monthStart && expDate <= monthEnd;
+    }) || [];
+
+    const revenue = monthSalesData.reduce((sum, sale) => sum + sale.total, 0);
+    const expense = monthExpensesData.reduce((sum, exp) => sum + exp.amount, 0);
+    const tax = monthSalesData.reduce((sum, sale) => sum + (sale.tax || 0), 0);
+
+    return {
+      month: format(monthDate, 'MMM yyyy'),
+      revenue: Number(revenue.toFixed(2)),
+      expenses: Number(expense.toFixed(2)),
+      profit: Number((revenue - expense).toFixed(2)),
+      tax: Number(tax.toFixed(2))
+    };
+  });
+
+  // Expense category chart data
+  const expenseCategoryData = Object.entries(expensesByCategory).map(([category, amount]) => ({
+    name: category,
+    value: Number(amount.toFixed(2))
+  }));
+
+  // Inventory by category chart data
+  const inventoryCategoryData = Object.entries(
+    products?.reduce((acc, p) => {
+      if (!acc[p.category]) {
+        acc[p.category] = { cost: 0, retail: 0 };
+      }
+      acc[p.category].cost += p.costPrice * p.stock;
+      acc[p.category].retail += p.sellingPrice * p.stock;
+      return acc;
+    }, {} as Record<string, { cost: number; retail: number }>) || {}
+  ).map(([category, data]) => ({
+    category,
+    costValue: Number(data.cost.toFixed(2)),
+    retailValue: Number(data.retail.toFixed(2))
+  }));
+
+  const COLORS = ['hsl(var(--primary))', 'hsl(var(--secondary))', 'hsl(var(--accent))', 'hsl(var(--muted))', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981'];
 
   // PDF Export Functions
   const exportOverviewPDF = () => {
@@ -380,6 +438,26 @@ const Accounting = () => {
               </CardContent>
             </Card>
           </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Revenue & Expenses Trend (Last 6 Months)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={monthlyTrendData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="revenue" fill="hsl(var(--primary))" name="Revenue" />
+                  <Bar dataKey="expenses" fill="hsl(var(--destructive))" name="Expenses" />
+                  <Bar dataKey="profit" fill="#10b981" name="Profit" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="profitloss" className="space-y-6">
@@ -477,6 +555,33 @@ const Accounting = () => {
               </CardContent>
             </Card>
           </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Expenses Breakdown by Category</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={expenseCategoryData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                    outerRadius={100}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {expenseCategoryData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="inventory" className="space-y-6">
@@ -561,6 +666,25 @@ const Accounting = () => {
               </Table>
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Inventory Value by Category</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={inventoryCategoryData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="category" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="costValue" fill="hsl(var(--primary))" name="Cost Value" />
+                  <Bar dataKey="retailValue" fill="#10b981" name="Retail Value" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="tax" className="space-y-6">
@@ -630,6 +754,24 @@ const Accounting = () => {
                   ))}
                 </TableBody>
               </Table>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Tax Collection Trend (Last 6 Months)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={monthlyTrendData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Line type="monotone" dataKey="tax" stroke="hsl(var(--primary))" strokeWidth={2} name="Tax Collected" />
+                </LineChart>
+              </ResponsiveContainer>
             </CardContent>
           </Card>
         </TabsContent>
