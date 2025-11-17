@@ -81,6 +81,11 @@ export const SystemRestore = ({ compact = false }: SystemRestoreProps) => {
         await db.expenses
           .filter(expense => new Date(expense.date) >= cutoffDate)
           .delete();
+
+        // Delete products added after cutoff date
+        await db.products
+          .filter(product => new Date(product.createdAt || 0) >= cutoffDate)
+          .delete();
       });
 
       toast({
