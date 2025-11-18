@@ -331,12 +331,12 @@ const Customers = () => {
           {filteredCustomers && filteredCustomers.length > 0 ? (
             <div className="space-y-4">
               {filteredCustomers.map((customer) => (
-                <div key={customer.id} className="p-6 bg-card rounded-lg border">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="text-lg font-semibold">{customer.name}</h3>
-                      <p className="text-sm text-muted-foreground">{customer.phone}</p>
-                      {customer.email && <p className="text-sm text-muted-foreground">{customer.email}</p>}
+                  <div key={customer.id} className="p-4 sm:p-6 bg-card rounded-lg border">
+                  <div className="flex flex-col sm:flex-row justify-between items-start gap-3 mb-4">
+                    <div className="flex-1">
+                      <h3 className="text-base sm:text-lg font-semibold">{customer.name}</h3>
+                      <p className="text-xs sm:text-sm text-muted-foreground">{customer.phone}</p>
+                      {customer.email && <p className="text-xs sm:text-sm text-muted-foreground">{customer.email}</p>}
                     </div>
                     <div className="flex gap-2">
                       <Button size="sm" variant="outline" onClick={() => handleEdit(customer)}>
@@ -347,7 +347,7 @@ const Customers = () => {
                       </Button>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                     <div>
                       <p className="text-muted-foreground">Loyalty Points</p>
                       <p className="font-medium">{customer.loyaltyPoints || 0}</p>
@@ -487,13 +487,13 @@ const Customers = () => {
 
       {/* Purchase History Dialog */}
       <Dialog open={isPurchaseHistoryOpen} onOpenChange={setIsPurchaseHistoryOpen}>
-        <DialogContent className="max-w-3xl max-h-[80vh]">
+        <DialogContent className="max-w-3xl max-h-[80vh] w-[95vw]">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-base sm:text-lg">
               Purchase History - {selectedCustomer?.name}
             </DialogTitle>
           </DialogHeader>
-          <ScrollArea className="h-[60vh] pr-4">
+          <ScrollArea className="h-[60vh] pr-2 sm:pr-4">
             {customerSales.length > 0 ? (
               <div className="space-y-4">
                 {customerSales.map((sale) => (
@@ -530,11 +530,26 @@ const Customers = () => {
                         <p className="text-sm font-semibold mb-2">Items:</p>
                         <div className="space-y-2">
                           {sale.items.map((item, idx) => (
-                            <div key={idx} className="flex justify-between text-sm">
-                              <span className="text-muted-foreground">
-                                {item.name} x {item.quantity} {item.unit || 'pc'}
-                              </span>
-                              <span>${item.total.toFixed(2)}</span>
+                            <div key={idx} className="space-y-1">
+                              <div className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">
+                                  {item.name} x {item.quantity} {item.unit || 'pc'}
+                                  {item.discountPercent && item.discountPercent > 0 && (
+                                    <span className="ml-2 text-xs text-success">
+                                      ({item.discountPercent}% off)
+                                    </span>
+                                  )}
+                                  {item.discountAmount && item.discountAmount > 0 && (
+                                    <span className="ml-2 text-xs text-success">
+                                      (-${item.discountAmount.toFixed(2)})
+                                    </span>
+                                  )}
+                                </span>
+                                <span className="font-medium">${item.total.toFixed(2)}</span>
+                              </div>
+                              <div className="flex justify-between text-xs text-muted-foreground">
+                                <span>@ ${item.price.toFixed(2)} each</span>
+                              </div>
                             </div>
                           ))}
                         </div>
