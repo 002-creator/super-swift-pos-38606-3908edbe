@@ -300,8 +300,8 @@ const Settings = () => {
   };
 
   return (
-    <div className="p-8 max-w-4xl">
-      <h1 className="text-3xl font-bold mb-8">Settings</h1>
+    <div className="p-4 sm:p-6 lg:p-8 max-w-4xl">
+      <h1 className="text-2xl sm:text-3xl font-bold mb-6 sm:mb-8">Settings</h1>
 
       <div className="space-y-6">
         {/* Store Settings */}
@@ -405,8 +405,9 @@ const Settings = () => {
                 placeholder="Add new category"
                 value={newCategory}
                 onChange={(e) => setNewCategory(e.target.value)}
+                className="flex-1"
               />
-              <Button onClick={addCategory}>
+              <Button onClick={addCategory} className="shrink-0">
                 <Plus className="w-4 h-4" />
               </Button>
             </div>
@@ -433,8 +434,9 @@ const Settings = () => {
                 placeholder="Add new supplier"
                 value={newSupplier}
                 onChange={(e) => setNewSupplier(e.target.value)}
+                className="flex-1"
               />
-              <Button onClick={addSupplier}>
+              <Button onClick={addSupplier} className="shrink-0">
                 <Plus className="w-4 h-4" />
               </Button>
             </div>
@@ -456,19 +458,20 @@ const Settings = () => {
             <CardTitle>Units of Measurement</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <Input
                 placeholder="Unit name (e.g., kilogram)"
                 value={newUnit.name}
                 onChange={(e) => setNewUnit({...newUnit, name: e.target.value})}
+                className="flex-1"
               />
               <Input
                 placeholder="Symbol (e.g., kg)"
                 value={newUnit.symbol}
                 onChange={(e) => setNewUnit({...newUnit, symbol: e.target.value})}
-                className="w-24"
+                className="w-full sm:w-24"
               />
-              <Button onClick={addUnit}>
+              <Button onClick={addUnit} className="shrink-0">
                 <Plus className="w-4 h-4" />
               </Button>
             </div>
@@ -490,11 +493,12 @@ const Settings = () => {
             <CardTitle>Quick Quantity Presets</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <Input
                 placeholder="Label (e.g., Half)"
                 value={newQuickQty.label}
                 onChange={(e) => setNewQuickQty({...newQuickQty, label: e.target.value})}
+                className="flex-1"
               />
               <Input
                 placeholder="Value (e.g., 0.5)"
@@ -502,9 +506,9 @@ const Settings = () => {
                 step="0.01"
                 value={newQuickQty.value || ''}
                 onChange={(e) => setNewQuickQty({...newQuickQty, value: parseFloat(e.target.value)})}
-                className="w-32"
+                className="flex-1"
               />
-              <Button onClick={addQuickQuantity}>
+              <Button onClick={addQuickQuantity} className="shrink-0">
                 <Plus className="w-4 h-4" />
               </Button>
             </div>
@@ -524,16 +528,16 @@ const Settings = () => {
         {/* Cashier Management */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              Cashier Management
+            <CardTitle className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+              <span>Cashier Management</span>
               <Dialog open={isCashierDialogOpen} onOpenChange={setIsCashierDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button size="sm">
+                  <Button size="sm" className="w-full sm:w-auto">
                     <UserPlus className="w-4 h-4 mr-2" />
                     Add Cashier
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="max-w-[90vw] sm:max-w-md">
                   <DialogHeader>
                     <DialogTitle>Add New Cashier</DialogTitle>
                   </DialogHeader>
@@ -575,13 +579,13 @@ const Settings = () => {
           <CardContent>
             <div className="space-y-2">
               {cashiers?.map((cashier) => (
-                <div key={cashier.id} className="flex justify-between items-center p-3 bg-secondary rounded">
+                <div key={cashier.id} className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 p-3 bg-secondary rounded">
                   <div>
                     <p className="font-semibold">{cashier.name}</p>
                     <p className="text-sm text-muted-foreground">{cashier.role}</p>
                   </div>
                   {cashier.role !== 'admin' && (
-                    <Button variant="ghost" size="sm" onClick={() => deleteCashier(cashier.id!)}>
+                    <Button variant="ghost" size="sm" onClick={() => deleteCashier(cashier.id!)} className="self-end sm:self-center">
                       <Trash2 className="w-4 h-4 text-destructive" />
                     </Button>
                   )}
@@ -607,7 +611,7 @@ const Settings = () => {
                   Change Admin Password
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-w-[90vw] sm:max-w-md">
                 <DialogHeader>
                   <DialogTitle>Reset Admin Password</DialogTitle>
                 </DialogHeader>
@@ -621,7 +625,7 @@ const Settings = () => {
                       onChange={(e) => setNewAdminPassword(e.target.value)}
                     />
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <Button variant="outline" onClick={() => setIsPasswordDialogOpen(false)} className="flex-1">
                       Cancel
                     </Button>
@@ -644,7 +648,7 @@ const Settings = () => {
             <CardTitle>Backup & Restore</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex gap-4">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
               <Button onClick={handleExport} className="flex-1">
                 <Download className="w-4 h-4 mr-2" />
                 Export Database
