@@ -63,6 +63,7 @@ const Expenses = () => {
         amount: newExpense.amount,
         date: newExpense.date || new Date(),
         paymentMethod: newExpense.paymentMethod || "cash",
+        type: newExpense.type || "business",
         createdBy: cashier?.[0]?.name || "Admin",
         createdAt: new Date(),
       });
