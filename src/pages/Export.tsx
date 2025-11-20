@@ -7,7 +7,6 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
-import { SystemRestore } from "@/components/SystemRestore";
 
 const Export = () => {
   const settings = useLiveQuery(() => db.settings.toArray());
@@ -98,30 +97,30 @@ const Export = () => {
   };
 
   return (
-    <div className="container mx-auto p-3 sm:p-6">
-      <div className="mb-4 sm:mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold">Database Export & Import</h1>
-        <p className="text-muted-foreground mt-2 text-sm sm:text-base">
+    <div className="container mx-auto p-6">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold">Database Export & Import</h1>
+        <p className="text-muted-foreground mt-2">
           Backup and restore your POS database
         </p>
       </div>
 
-      <div className="grid gap-4 sm:gap-6 lg:grid-cols-2 mb-6">
+      <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-              <Download className="h-4 w-4 sm:h-5 sm:w-5" />
+            <CardTitle className="flex items-center gap-2">
+              <Download className="h-5 w-5" />
               Export Database
             </CardTitle>
-            <CardDescription className="text-xs sm:text-sm">
+            <CardDescription>
               Download a complete backup of your database
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-xs sm:text-sm text-muted-foreground mb-4">
+            <p className="text-sm text-muted-foreground mb-4">
               Select which data types to export:
             </p>
-            <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-6">
+            <div className="grid grid-cols-2 gap-3 mb-6">
               {Object.entries(exportOptions).map(([key, value]) => (
                 <div key={key} className="flex items-center space-x-2">
                   <Checkbox
@@ -131,7 +130,7 @@ const Export = () => {
                       setExportOptions({ ...exportOptions, [key]: !!checked })
                     }
                   />
-                  <Label htmlFor={key} className="text-xs sm:text-sm capitalize cursor-pointer">
+                  <Label htmlFor={key} className="text-sm capitalize cursor-pointer">
                     {key}
                   </Label>
                 </div>
@@ -139,7 +138,7 @@ const Export = () => {
             </div>
             <Button 
               onClick={handleExport} 
-              className="w-full text-sm"
+              className="w-full"
               disabled={!Object.values(exportOptions).some(v => v)}
             >
               <Download className="mr-2 h-4 w-4" />
@@ -150,21 +149,21 @@ const Export = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-              <Upload className="h-4 w-4 sm:h-5 sm:w-5" />
+            <CardTitle className="flex items-center gap-2">
+              <Upload className="h-5 w-5" />
               Import Database
             </CardTitle>
-            <CardDescription className="text-xs sm:text-sm">
+            <CardDescription>
               Restore your database from a backup file
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-xs sm:text-sm text-muted-foreground mb-4">
+            <p className="text-sm text-muted-foreground mb-4">
               This will replace all current data with the data from the backup file. This action cannot be undone.
             </p>
             <Button
               variant="outline"
-              className="w-full text-sm"
+              className="w-full"
               onClick={() => document.getElementById('import-file')?.click()}
             >
               <Upload className="mr-2 h-4 w-4" />
@@ -180,19 +179,6 @@ const Export = () => {
           </CardContent>
         </Card>
       </div>
-
-      {/* System Restore Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base sm:text-lg">System Restore</CardTitle>
-          <CardDescription className="text-xs sm:text-sm">
-            Undo recent transactions and restore stock levels
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <SystemRestore />
-        </CardContent>
-      </Card>
     </div>
   );
 };

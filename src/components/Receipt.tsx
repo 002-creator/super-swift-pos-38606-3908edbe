@@ -80,8 +80,8 @@ export const printReceipt = async (sale: Sale, settings: Settings) => {
   // Items
   doc.setFont('helvetica', 'bold');
   doc.text('Item', 5, y);
-  doc.text('Qty', 38, y);
-  doc.text('Price', 53, y);
+  doc.text('Qty', 45, y);
+  doc.text('Price', 55, y);
   doc.text('Total', 68, y);
   y += lineHeight;
   
@@ -91,8 +91,8 @@ export const printReceipt = async (sale: Sale, settings: Settings) => {
     const displayUnit = getDisplayUnit(item.quantity, item.unit);
     
     doc.text(name, 5, y);
-    doc.text(`${displayUnit.qty} ${displayUnit.unit}`, 38, y);
-    doc.text(item.price.toFixed(2), 53, y);
+    doc.text(`${displayUnit.qty} ${displayUnit.unit}`, 45, y);
+    doc.text(item.price.toFixed(2), 55, y);
     y += lineHeight;
     
     // Show item discount if exists

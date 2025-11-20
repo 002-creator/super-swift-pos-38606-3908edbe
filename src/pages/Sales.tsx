@@ -255,9 +255,9 @@ const Sales = () => {
   };
 
   return (
-    <div className="flex flex-col lg:flex-row h-screen bg-background">
+    <div className="flex h-screen bg-background">
       {/* Left: Product Search & Cart */}
-      <div className="flex-1 p-3 sm:p-6 lg:p-8 overflow-auto">
+      <div className="flex-1 p-8 overflow-auto">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">Point of Sale</h1>
           <div className="flex items-center gap-4">
@@ -457,7 +457,7 @@ const Sales = () => {
       </div>
 
         {/* Right: Checkout Panel */}
-        <div className="w-full lg:w-96 bg-card border-t lg:border-l border-border p-3 sm:p-6 flex flex-col">
+        <div className="w-96 bg-card border-l border-border p-6 flex flex-col">
           <h2 className="text-2xl font-bold mb-6">Checkout</h2>
 
           {/* Customer Selection */}
@@ -486,33 +486,16 @@ const Sales = () => {
               </div>
             )}
             {selectedCustomer && (
-              <div className="space-y-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setSelectedCustomer(null);
-                    setCustomerSearch('');
-                  }}
-                >
-                  Clear Customer
-                </Button>
-                
-                {/* Display customer loan info */}
-                {(() => {
-                  const customer = customers?.find(c => c.id === selectedCustomer);
-                  if (customer && customer.loanBalance > 0) {
-                    return (
-                      <div className="p-3 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
-                        <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
-                          Outstanding Loan: {currency} {customer.loanBalance.toFixed(2)}
-                        </p>
-                      </div>
-                    );
-                  }
-                  return null;
-                })()}
-              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSelectedCustomer(null);
+                  setCustomerSearch('');
+                }}
+              >
+                Clear Customer
+              </Button>
             )}
           </div>
 

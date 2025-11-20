@@ -82,7 +82,6 @@ export interface Settings {
   receiptFooter: string;
   logo?: string;
   exportFileName?: string;
-  mobileNumber?: string;
 }
 
 export interface Category {
@@ -106,7 +105,7 @@ export interface Cashier {
   id?: number;
   name: string;
   pin: string;
-  role: 'superadmin' | 'admin' | 'cashier';
+  role: 'admin' | 'cashier';
   createdAt: Date;
 }
 
@@ -117,7 +116,6 @@ export interface Expense {
   amount: number;
   date: Date;
   paymentMethod: 'cash' | 'card';
-  type: 'business' | 'personal';
   receipt?: string;
   createdBy: string;
   createdAt: Date;
@@ -158,26 +156,6 @@ export class POSDatabase extends Dexie {
       return tx.table('products').toCollection().modify(product => {
         if (!product.unit) {
           product.unit = 'piece';
-        }
-      });
-    });
-    
-    // Version 6: Add type field to expenses and mobileNumber to settings
-    this.version(6).stores({
-      products: '++id, barcode, name, category, stock',
-      sales: '++id, timestamp, customerId',
-      customers: '++id, phone, name',
-      settings: '++id',
-      cashiers: '++id, name',
-      categories: '++id, name',
-      suppliers: '++id, name',
-      units: '++id, name',
-      expenses: '++id, date, category, type',
-      quickQuantities: '++id, value'
-    }).upgrade(tx => {
-      return tx.table('expenses').toCollection().modify(expense => {
-        if (!expense.type) {
-          expense.type = 'business';
         }
       });
     });
@@ -248,7 +226,7 @@ export const initializeCashiers = async () => {
     await db.cashiers.add({
       name: 'Admin',
       pin: '1234',
-      role: 'superadmin',
+      role: 'admin',
       createdAt: new Date()
     });
   }

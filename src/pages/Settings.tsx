@@ -42,7 +42,7 @@ const Settings = () => {
   const [newCategory, setNewCategory] = useState('');
   const [newSupplier, setNewSupplier] = useState('');
   const [newUnit, setNewUnit] = useState({ name: '', symbol: '' });
-  const [newCashier, setNewCashier] = useState({ name: '', pin: '', role: 'cashier' as 'superadmin' | 'admin' | 'cashier' });
+  const [newCashier, setNewCashier] = useState({ name: '', pin: '', role: 'cashier' as 'admin' | 'cashier' });
   const [isCashierDialogOpen, setIsCashierDialogOpen] = useState(false);
   const [newQuickQty, setNewQuickQty] = useState({ value: 0, label: '' });
   const [newAdminPassword, setNewAdminPassword] = useState('');
@@ -92,36 +92,13 @@ const Settings = () => {
     }
 
     try {
-      // Get currently logged-in cashier
-      const cashierData = localStorage.getItem('cashier');
-      if (!cashierData) {
-        toast({
-          title: 'Error',
-          description: 'No logged-in admin found',
-          variant: 'destructive'
-        });
-        return;
-      }
-
-      const currentCashier = JSON.parse(cashierData);
-      const cashierInDb = await db.cashiers.get(currentCashier.id);
+      const adminCashiers = await db.cashiers.filter(c => c.role === 'admin').toArray();
       
-      if (cashierInDb && (cashierInDb.role === 'admin' || cashierInDb.role === 'superadmin')) {
-        await db.cashiers.update(cashierInDb.id!, { pin: newAdminPassword });
-        
-        // Update localStorage with new password
-        currentCashier.pin = newAdminPassword;
-        localStorage.setItem('cashier', JSON.stringify(currentCashier));
-        
+      if (adminCashiers.length > 0) {
+        await db.cashiers.update(adminCashiers[0].id!, { pin: newAdminPassword });
         toast({
           title: 'Success',
-          description: 'Your password has been changed successfully'
-        });
-      } else {
-        toast({
-          title: 'Error',
-          description: 'Only admins can change their password',
-          variant: 'destructive'
+          description: 'Admin password has been reset'
         });
       }
       
@@ -130,7 +107,7 @@ const Settings = () => {
     } catch (error) {
       toast({
         title: 'Error',
-        description: 'Failed to reset password',
+        description: 'Failed to reset admin password',
         variant: 'destructive'
       });
     }
@@ -291,37 +268,7 @@ const Settings = () => {
 
   const deleteCashier = async (id: number) => {
     if (!confirm('Are you sure you want to delete this cashier?')) return;
-    
     try {
-      // Check if logged-in user is super admin
-      const cashierData = localStorage.getItem('cashier');
-      if (!cashierData) {
-        toast({ title: 'Error', description: 'Not authorized', variant: 'destructive' });
-        return;
-      }
-
-      const currentCashier = JSON.parse(cashierData);
-      const cashierInDb = await db.cashiers.get(currentCashier.id);
-      
-      if (cashierInDb?.role !== 'superadmin') {
-        toast({ 
-          title: 'Error', 
-          description: 'Only super admins can delete admins', 
-          variant: 'destructive' 
-        });
-        return;
-      }
-
-      const cashierToDelete = await db.cashiers.get(id);
-      if (cashierToDelete?.role === 'superadmin' && cashierInDb.id !== id) {
-        toast({ 
-          title: 'Error', 
-          description: 'Cannot delete other super admins', 
-          variant: 'destructive' 
-        });
-        return;
-      }
-
       await db.cashiers.delete(id);
       toast({ title: 'Success', description: 'Cashier deleted' });
     } catch (error) {
@@ -391,18 +338,6 @@ const Settings = () => {
                 step="0.1"
                 value={settings.taxRate}
                 onChange={(e) => setSettings({...settings, taxRate: parseFloat(e.target.value)})}
-                className="mt-2"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="mobileNumber">Mobile Number</Label>
-              <Input
-                id="mobileNumber"
-                type="tel"
-                value={settings.mobileNumber || ''}
-                onChange={(e) => setSettings({...settings, mobileNumber: e.target.value})}
-                placeholder="+1234567890"
                 className="mt-2"
               />
             </div>
